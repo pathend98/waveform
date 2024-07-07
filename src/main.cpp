@@ -3,6 +3,10 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <memory>
 
 using std::string;
 
@@ -30,6 +34,20 @@ struct WAVEHeader
     uint32_t subChunk2Size;
 };
 
+std::shared_ptr<std::vector<float>> normaliseAudioData(const std::vector<int16_t>& data)
+{
+
+    std::shared_ptr<std::vector<float>> normalisedData = std::make_shared<std::vector<float>>();
+    int16_t maxSample = *std::max_element(data.begin(), data.end());
+    int16_t minSample = *std::min_element(data.begin(), data.end());
+    int16_t maxAbsSample = std::max(std::abs(maxSample), std::abs(minSample));
+
+    for (int16_t sample : data)
+        normalisedData->push_back(static_cast<float>(sample) / maxAbsSample);
+
+    return normalisedData;
+}
+
 void readWAV(const string filename) 
 {
     std::ifstream file(filename, std::ios::binary);
@@ -52,14 +70,20 @@ void readWAV(const string filename)
         return;
     }
 
-    std::cout << "Sub-Chunk 1 Size: " << header.subChunk1Size << std::endl;
-    std::cout << "Audio Format: " << header.audioFormat << std::endl;
-    std::cout << "Number of Channels: " << header.numChannels << std::endl;
-    std::cout << "Sample Rate: " << header.sampleRate << std::endl;
-    std::cout << "Byte Rate: " << header.byteRate << std::endl;
-    std::cout << "Block Align: " << header.blockAlign << std::endl;
-    std::cout << "Bits per Sample: " << header.bitsPerSample << std::endl;
-    std::cout << "Sub-Chunk 2 Size: " << header.subChunk2Size << std::endl;
+    // std::cout << "Chunk Size: " << header.chunnkSize << std::endl;
+    // std::cout << "Sub-Chunk 1 Size: " << header.subChunk1Size << std::endl;
+    // std::cout << "Audio Format: " << header.audioFormat << std::endl;
+    // std::cout << "Number of Channels: " << header.numChannels << std::endl;
+    // std::cout << "Sample Rate: " << header.sampleRate << std::endl;
+    // std::cout << "Byte Rate: " << header.byteRate << std::endl;
+    // std::cout << "Block Align: " << header.blockAlign << std::endl;
+    // std::cout << "Bits per Sample: " << header.bitsPerSample << std::endl; 
+    // std::cout << "Sub-Chunk 2 Size: " << header.subChunk2Size << std::endl;
+
+    // Bits per sample is 16 here, but probably shouldn't use int16_t
+    std::vector<int16_t> audioData(header.subChunk2Size / sizeof(int16_t));
+    file.read(reinterpret_cast<char *>(audioData.data()), header.subChunk2Size);
+    auto normalised = normaliseAudioData(audioData);
 
     file.close();
 }
